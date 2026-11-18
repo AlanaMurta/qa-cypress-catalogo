@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo de produtos</title>
+  <style>
+    body { margin: 0; color: #162921; background: #f1f7f4; font: 1rem system-ui; }
+    main { max-width: 42rem; margin: 4rem auto; padding: 0 1.5rem; }
+    button { padding: .55rem .8rem; margin: .25rem; cursor: pointer; }
+    button[aria-pressed="true"] { background: #14563b; color: white; }
+    li { margin-bottom: .5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Catálogo de produtos</h1>
+    <div role="group" aria-label="Categorias">
+      <button type="button" data-category="" aria-pressed="true">Todos</button>
+      <button type="button" data-category="papelaria" aria-pressed="false">Papelaria</button>
+      <button type="button" data-category="casa" aria-pressed="false">Casa</button>
+      <button type="button" data-category="eletronicos" aria-pressed="false">Eletrônicos</button>
+    </div>
+    <p role="status" data-cy="mensagem"></p>
+    <ul aria-label="Produtos" data-cy="produtos"></ul>
+  </main>
+  <script>
+    const buttons = document.querySelectorAll('button[data-category]')
+    const list = document.querySelector('[data-cy="produtos"]')
+    const message = document.querySelector('[data-cy="mensagem"]')
+    let latestRequest = 0
+
+    async function loadProducts(category) {
+      const request = ++latestRequest
+      const query = category ? '?categoria=' + encodeURIComponent(category) : ''
+      list.replaceChildren()
+      message.textContent = 'Carregando…'
+
+      try {
+        const response = await fetch('/api/produtos' + query)
+        if (!response.ok) throw new Error('Falha ao carregar os produtos')
+        const products = await response.json()
+        if (request !== latestRequest) return
+
+        for (const product of products) {
+          const item = document.createElement('li')
+          item.textContent = product.name
+          list.append(item)
+        }
+        message.textContent = products.length ? '' : 'Nenhum produto encontrado.'
+      } catch {
+        if (request === latestRequest) {
+          message.textContent = 'Não foi possível carregar os produtos.'
+        }
+      }
+    }
+
+    for (const button of buttons) {
+      button.addEventListener('click', () => {
+        for (const option of buttons) {
+          option.setAttribute('aria-pressed', String(option === button))
+        }
+        loadProducts(button.dataset.category)
+      })
+    }
+
+    loadProducts('')
+  </script>
+</body>
+</html>
